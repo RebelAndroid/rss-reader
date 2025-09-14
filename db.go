@@ -161,6 +161,41 @@ func read_articles_db(limit int) []article {
 	return article_list
 }
 
+func query_articles_db(query string) []article {
+	article_rows, err := db.Query("SELECT url, title, description,pubdate FROM articles WHERE title ILIKE ?", "%"+query+"%")
+	if err != nil {
+		panic(err.Error())
+	}
+
+	var article_list []article
+	for article_rows.Next() {
+		var article article
+		_ = article_rows.Scan(&article.Url, &article.Title, &article.Desc, &article.Date)
+		article.EscapedUrl = url.QueryEscape(article.Url)
+
+		date, err := time.Parse(time.RFC3339, article.Date)
+		if err != nil {
+			panic(err.Error())
+		}
+		article.Date = date.Format(time.RFC1123)
+
+		comment_rows, err := db.Query("SELECT title, comments FROM comments JOIN feeds ON feed=url WHERE article=?", article.Url)
+		if err != nil {
+			panic(err.Error())
+		}
+		var comments_array []comments
+		for comment_rows.Next() {
+			var comment comments
+			_ = comment_rows.Scan(&comment.Feed, &comment.Url)
+			comments_array = append(comments_array, comment)
+		}
+		article.Comments = comments_array
+
+		article_list = append(article_list, article)
+	}
+	return article_list
+}
+
 func feeds_db() []feed {
 	feed_rows, err := db.Query("SELECT url, title, description FROM feeds")
 	if err != nil {

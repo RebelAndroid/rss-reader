@@ -3,3 +3,5 @@
 .devenv.flake.nix
 .envrc
 rss-reader
+data.db
+data.db.wal
