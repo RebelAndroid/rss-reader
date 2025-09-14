@@ -1,0 +1,119 @@
+.article {
+        max-width: 100ch;
+        width: 100%;
+        padding: 20px;
+        box-sizing: border-box;
+        border: 1px solid #ccc;
+        border-radius: 8px;
+        background-color: #f9f9f9;
+}
+
+.article h1 {
+        margin: 0 0 16px 0;
+        font-size: 1.5rem;
+        color: #333;
+        word-wrap: break-word;
+        overflow-wrap: break-word;
+}
+
+.article p {
+        line-height: 1.6;
+        color: #666;
+        word-wrap: break-word;
+        overflow-wrap: break-word;
+        hyphens: auto;
+}
+
+.article a {
+        line-height: 1.6;
+        word-wrap: break-word;
+        overflow-wrap: break-word;
+        hyphens: none;
+}
+
+.buttons {
+        display: flex;
+        gap: 1em;
+        margin-bottom: 1em;
+}
+
+button {
+        background-color: oklch(87% 0 0); /* neutral 300*/
+        border: 1px oklch(70.8% 0 0) solid; /* neutral 400 */
+        padding: 0.5em;
+        border-radius: 4px;
+        cursor: pointer;
+}
+
+button:hover {
+        background-color: oklch(70.8% 0 0); /* neutral 400*/
+}
+
+.grow {
+        flex-grow: 1;
+}
+
+input {
+        width: 100%;
+        padding: 0;
+        border: 1px black solid;
+}
+
+.plus-button {
+        aspect-ratio: 1/1;
+        width: 1lh;
+}
+
+.plus-button {
+        aspect-ratio: 1/1;
+        width: 1lh;
+        background-color: oklch(88.5% 0.062 18.334);
+}
+
+.plus-button-outer:hover .plus-button {
+        background-color: oklch(80.8% 0.114 19.571);
+}
+
+.plus-button-outer {
+        background-color: oklch(88.5% 0.062 18.334);
+        height: 100%; /* For some reason this makes it a square?*/
+}
+
+.plus-button-outer:hover {
+        background-color: oklch(80.8% 0.114 19.571);
+}
+
+.article a {
+        display: block;
+}
+
+header {
+        display: flex;
+        justify-content: space-around;
+        max-width: 100ch;
+        margin: 1em auto;
+}
+
+.feed-header {
+        display: flex;
+        flex-direction: row;
+        justify-content: space-between;
+}
+
+input {
+        max-width: 100ch;
+}
+
+main {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 1.5em;
+}
+
+.tag {
+        background-color: oklch(94.5% 0.129 101.54); /* Yellow 200 */
+        border: 1px solid oklch(90.5% 0.182 98.111); /* Yellow 300 */
+        /* width: auto; */
+        display: inline;
+}

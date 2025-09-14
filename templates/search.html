@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Naarum RSS Reader - Search</title>
+    <link href="/preflight.css" rel="stylesheet">
+    <link href="/index.css" rel="stylesheet">
+    <script src="/htmx.min.js"></script>
+</head>
+<body>
+    <header>
+        <a href="/unread">Unread</a>
+        <a href="/feeds">Feeds</a>
+        <a href="/search">search</a>
+        <a href="/history">History</a>
+    </header>
+    <main>
+        <search>
+            <form hx-post="/api/search" hx-target="#search-results">
+                <input type="text" name="query" placeholder="query..."/>
+                <button type="submit">Search</button>
+            </form>
+        </search>
+    <div id="search-results">
+        {{range .}}
+            <div class="article">
+                <a href="/article/{{.EscapedUrl}}"><h1>{{.Title}}</h1></a>
+                <a href="{{.Url}}" target="_blank">{{.Url}}</a>
+                <p>{{.Date}}</p>
+                {{range .Comments}}
+                    <a href="{{.Url}}" target="_blank">Comments on {{.Feed}}</a>
+                {{end}}
+            </div>
+        {{end}}
+    </div>
+</main>
+</body>
+</html>

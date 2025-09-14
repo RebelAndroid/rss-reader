@@ -1,0 +1,5 @@
+.devenv
+.direnv
+.devenv.flake.nix
+.envrc
+rss-reader

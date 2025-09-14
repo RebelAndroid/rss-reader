@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Naarum RSS Reader - Feeds</title>
+    <link href="/preflight.css" rel="stylesheet">
+    <link href="/index.css" rel="stylesheet">
+    <script src="/htmx.min.js"></script>
+</head>
+<body>
+    <header>
+        <a href="/unread">Unread</a>
+        <a href="/feeds">Feeds</a>
+        <a href="/search">search</a>
+        <a href="/history">History</a>
+    </header>
+    <main>
+        <form hx-post="/api/add_feed">
+            <input name="url" type="text" value="" placeholder="feed url"/>
+            <input type="submit" value="What" />
+        </form>
+    {{range .}}
+        <div class="article">
+            <div class="feed-header">
+                <a href="{{.SiteUrl}}"><h1>{{.Title}}</h1></a>
+                <button class="plus-button-outer" hx-post="/api/remove_feed/" hx-target="closest .article" hx-swap="delete" hx-vals = '"url": "{{.FeedUrl}}"'><div class="plus-button">×</div></button>
+            </div>
+            <p>{{.Description}}</p>
+        </div>
+    {{end}}
+    </main>
+</body>
+</html>
