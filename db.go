@@ -2,7 +2,10 @@ package main
 
 import (
 	"database/sql"
+	"fmt"
 	"net/url"
+	"regexp"
+	"strings"
 	"time"
 
 	"github.com/marcboeker/go-duckdb/v2"
@@ -162,7 +165,28 @@ func read_articles_db(limit int) []article {
 }
 
 func query_articles_db(query string) []article {
-	article_rows, err := db.Query("SELECT url, title, description,pubdate FROM articles WHERE title ILIKE ?", "%"+query+"%")
+	r := regexp.MustCompile(`^#?([a-z]|[A-Z]|[0-9])+$`)
+
+	parts := strings.Split(query, " ")
+	condition := ""
+	for _, word := range parts {
+		fmt.Println(word)
+		if !r.MatchString(word) {
+			fmt.Printf("Bad search query: %s, problem: %s\n", query, word)
+			return []article{}
+		}
+		if strings.HasPrefix(word, "#") {
+			condition = condition + "list_contains(tags, '" + word[1:] + "') AND "
+		} else {
+			condition = condition + "title ILIKE '%" + word + "%' AND "
+		}
+	}
+
+	condition = condition + "true"
+
+	fmt.Println("condition: " + condition)
+
+	article_rows, err := db.Query("SELECT url, title, description,pubdate FROM articles WHERE " + condition)
 	if err != nil {
 		panic(err.Error())
 	}

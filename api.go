@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"io"
 	"net/http"
 	"net/url"
@@ -92,7 +91,6 @@ func search_query(w http.ResponseWriter, r *http.Request) {
 	}
 
 	query := parsed["query"][0]
-	fmt.Println(query)
 
 	article_list := query_articles_db(query)
 
