@@ -54,9 +54,10 @@ button:hover {
 }
 
 input {
-        width: 100%;
+        /* width: 100%; */
         padding: 0;
         border: 1px black solid;
+        max-width: 100ch;
 }
 
 .plus-button {
@@ -100,10 +101,6 @@ header {
         justify-content: space-between;
 }
 
-input {
-        max-width: 100ch;
-}
-
 main {
         display: flex;
         flex-direction: column;
@@ -116,4 +113,18 @@ main {
         border: 1px solid oklch(90.5% 0.182 98.111); /* Yellow 300 */
         /* width: auto; */
         display: inline;
+}
+
+form {
+        display: flex;
+        flex-direction: row;
+}
+
+.text-input {
+        flex-grow: 1;
+}
+
+.search {
+        width: 100%;
+        max-width: 100ch;
 }

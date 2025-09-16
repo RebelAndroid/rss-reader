@@ -141,9 +141,10 @@ func main() {
 
 	mux.HandleFunc("/search", search_handler)
 
-	update_feed(db, "https://lobste.rs/rss")
-	update_feed(db, "https://news.ycombinator.com/rss")
-	update_feed(db, "https://mbund.dev/index.xml")
+	// update_feed(db, "https://lobste.rs/rss")
+	// update_feed(db, "https://news.ycombinator.com/rss")
+	// update_feed(db, "https://mbund.dev/index.xml")
 
+	fmt.Println("server starting")
 	log.Fatal(http.ListenAndServe(":8080", mux))
 }

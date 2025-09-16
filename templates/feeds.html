@@ -16,9 +16,9 @@
         <a href="/history">History</a>
     </header>
     <main>
-        <form hx-post="/api/add_feed">
-            <input name="url" type="text" value="" placeholder="feed url"/>
-            <input type="submit" value="What" />
+        <form class="search" hx-post="/api/add_feed">
+            <input class="text-input" name="url" type="text" value="" placeholder="feed url"/>
+            <button type="submit">Add Feed</button>
         </form>
     {{range .}}
         <div class="article">

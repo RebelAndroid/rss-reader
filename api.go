@@ -106,7 +106,7 @@ func unread_handler(w http.ResponseWriter, r *http.Request) {
 	article_list := unread_articles_db(10)
 
 	articles := articles{
-		FavoriteTags: []string{"Read Later", "Favorite", "Reference"},
+		FavoriteTags: []string{"later", "favorite", "reference", "archive"},
 		Articles:     article_list,
 	}
 
