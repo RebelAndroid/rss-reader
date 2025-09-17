@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -8,6 +9,7 @@
     <link href="/index.css" rel="stylesheet">
     <script src="/htmx.min.js"></script>
 </head>
+
 <body>
     <header>
         <a href="/unread">Unread</a>
@@ -21,18 +23,19 @@
             <a href="{{.Url}}" target="_blank">{{.Url}}</a>
             <p>{{.Date}}</p>
             {{range .Comments}}
-                <a href="{{.Url}}" target="_blank">Comments on {{.Feed}}</a>
+            <a href="{{.Url}}" target="_blank">Comments on {{.Feed}}</a>
             {{end}}
             <div>
                 {{range .Tags}}
-                    <p class="tag">{{.}}</p>
+                <p class="tag">{{.}}</p>
                 {{end}}
             </div>
-            <form hx-post="/api/add_tag/" hx-vals = '"url": "{{.Url}}"' hx-swap="none">
-                <input class="text-input" name="tag" type="text" value="" placeholder="tag"/>
+            <form hx-post="/api/add_tag/" hx-vals='"url": "{{.Url}}"' hx-swap="none">
+                <input class="text-input" name="tag" type="text" value="" placeholder="tag" />
                 <button type="submit">Add Tag</button>
             </form>
         </div>
     </main>
 </body>
+
 </html>

@@ -6,6 +6,7 @@ import (
 	"html/template"
 	"log"
 	"net/http"
+	"time"
 
 	_ "embed"
 
@@ -66,6 +67,8 @@ var search_template *template.Template
 
 var search_results_template *template.Template
 
+var feed_template *template.Template
+
 func main() {
 	db = init_db()
 	defer db.Close()
@@ -92,6 +95,11 @@ func main() {
 	}
 
 	search_results_template, err = template.ParseFiles("templates/search-results.html")
+	if err != nil {
+		panic(err.Error())
+	}
+
+	feed_template, err = template.ParseFiles("templates/feed.html")
 	if err != nil {
 		panic(err.Error())
 	}
@@ -141,9 +149,13 @@ func main() {
 
 	mux.HandleFunc("/search", search_handler)
 
-	// update_feed(db, "https://lobste.rs/rss")
-	// update_feed(db, "https://news.ycombinator.com/rss")
-	// update_feed(db, "https://mbund.dev/index.xml")
+	go func() {
+		for {
+			update_feeds(db)
+			fmt.Println("updating all feeds")
+			time.Sleep(60 * 60 * time.Second)
+		}
+	}()
 
 	fmt.Println("server starting")
 	log.Fatal(http.ListenAndServe(":8080", mux))

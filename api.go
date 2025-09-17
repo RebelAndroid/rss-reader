@@ -4,6 +4,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"strings"
 )
 
 func remove_feed(w http.ResponseWriter, r *http.Request) {
@@ -76,8 +77,23 @@ func add_feed(w http.ResponseWriter, r *http.Request) {
 	}
 
 	url := parsed["url"][0]
-	add_feed_db(url)
-	update_feed(db, url)
+
+	if !strings.HasPrefix(url, "https://") || !strings.HasPrefix(url, "http://") {
+		url = "https://" + url
+	}
+
+	paths := []string{"/feed", "/index.xml", "/rss"}
+
+	for _, path := range paths {
+		resp, err := http.Get(url + path)
+		if err == nil && resp.StatusCode == 200 {
+			add_feed_db(url + path)
+			update_feed(db, url+path)
+			feed_template.Execute(w, get_feed_db(url+path))
+			return
+		}
+	}
+
 }
 
 func search_query(w http.ResponseWriter, r *http.Request) {

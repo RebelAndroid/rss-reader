@@ -241,6 +241,26 @@ func feeds_db() []feed {
 	return feeds
 }
 
+func get_feed_db(requested_url string) feed {
+	start := time.Now()
+	feed_row := db.QueryRow("SELECT url, title, description FROM feeds WHERE url=?", requested_url)
+
+	var feed feed
+	err := feed_row.Scan(&feed.FeedUrl, &feed.Title, &feed.Description)
+	if err != nil {
+		panic(err.Error())
+	}
+	feed_url, err := url.Parse(feed.FeedUrl)
+	if err != nil {
+		panic(err.Error())
+	}
+	feed.SiteUrl = "https://" + feed_url.Host
+	end := time.Now()
+	fmt.Println(end.Sub(start))
+
+	return feed
+}
+
 func add_tag_db(url string, tag string) {
 	_, err := db.Query("UPDATE articles SET tags=list_distinct(list_append(tags, ?)) WHERE url=?", tag, url)
 	if err != nil {

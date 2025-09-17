@@ -16,10 +16,11 @@
         <a href="/history">History</a>
     </header>
     <main>
-        <form class="search" hx-post="/api/add_feed">
+        <form class="search" hx-post="/api/add_feed" hx-swap="afterbegin" hx-target="#feeds">
             <input class="text-input" name="url" type="text" value="" placeholder="feed url"/>
             <button type="submit">Add Feed</button>
         </form>
+    <div id="feeds">
     {{range .}}
         <div class="article">
             <div class="feed-header">
@@ -29,6 +30,7 @@
             <p>{{.Description}}</p>
         </div>
     {{end}}
+    </div>
     </main>
 </body>
 </html>
