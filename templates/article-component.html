@@ -1,0 +1,17 @@
+<div class="item">
+    <a href="/article/{{.EscapedUrl}}"><h1>{{.Title}}</h1></a>
+    <a href="{{.Url}}" target="_blank">{{.Url}}</a>
+    <p>{{.Date}}</p>
+    {{range .Comments}}
+        <a href="{{.Url}}" target="_blank">Comments on {{.Feed}}</a>
+    {{end}}
+    <div>
+        {{range .Tags}}
+        <p class="tag">{{.}}</p>
+        {{end}}
+    </div>
+    <form hx-post="/api/add_tag/" hx-vals='"url": "{{.Url}}"' hx-swap="none">
+        <input class="text-input" name="tag" type="text" value="" placeholder="tag or -tag" />
+        <button type="submit">Add Tag</button>
+    </form>
+</div>

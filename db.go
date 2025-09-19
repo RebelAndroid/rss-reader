@@ -12,7 +12,7 @@ import (
 )
 
 func init_db() *sql.DB {
-	db, err := sql.Open("duckdb", "./data.db")
+	db, err := sql.Open("duckdb", "data/data.db")
 	if err != nil {
 		println(err.Error())
 		panic("unable to open database")
@@ -94,15 +94,15 @@ func mark_read_db(url string) {
 	}
 }
 
-func unread_articles_db(limit int) []article {
+func unread_articles_db(limit int) []Article {
 	article_rows, err := db.Query("SELECT url, title, description,pubdate FROM articles WHERE read=false ORDER BY pubdate DESC LIMIT ?", limit)
 	if err != nil {
 		panic(err.Error())
 	}
 
-	var article_list []article
+	var article_list []Article
 	for article_rows.Next() {
-		var article article
+		var article Article
 		_ = article_rows.Scan(&article.Url, &article.Title, &article.Desc, &article.Date)
 		article.EscapedUrl = url.QueryEscape(article.Url)
 
@@ -116,9 +116,9 @@ func unread_articles_db(limit int) []article {
 		if err != nil {
 			panic(err.Error())
 		}
-		var comments_array []comments
+		var comments_array []Comments
 		for comment_rows.Next() {
-			var comment comments
+			var comment Comments
 			_ = comment_rows.Scan(&comment.Feed, &comment.Url)
 			comments_array = append(comments_array, comment)
 		}
@@ -129,15 +129,15 @@ func unread_articles_db(limit int) []article {
 	return article_list
 }
 
-func read_articles_db(limit int) []article {
+func read_articles_db(limit int) []Article {
 	article_rows, err := db.Query("SELECT url, title, description,pubdate FROM articles WHERE read=true ORDER BY pubdate DESC LIMIT ?", limit)
 	if err != nil {
 		panic(err.Error())
 	}
 
-	var article_list []article
+	var article_list []Article
 	for article_rows.Next() {
-		var article article
+		var article Article
 		_ = article_rows.Scan(&article.Url, &article.Title, &article.Desc, &article.Date)
 		article.EscapedUrl = url.QueryEscape(article.Url)
 
@@ -151,9 +151,9 @@ func read_articles_db(limit int) []article {
 		if err != nil {
 			panic(err.Error())
 		}
-		var comments_array []comments
+		var comments_array []Comments
 		for comment_rows.Next() {
-			var comment comments
+			var comment Comments
 			_ = comment_rows.Scan(&comment.Feed, &comment.Url)
 			comments_array = append(comments_array, comment)
 		}
@@ -164,7 +164,7 @@ func read_articles_db(limit int) []article {
 	return article_list
 }
 
-func query_articles_db(query string) []article {
+func query_articles_db(query string) []Article {
 	r := regexp.MustCompile(`^#?([a-z]|[A-Z]|[0-9])+$`)
 
 	parts := strings.Split(query, " ")
@@ -173,7 +173,7 @@ func query_articles_db(query string) []article {
 		fmt.Println(word)
 		if !r.MatchString(word) {
 			fmt.Printf("Bad search query: %s, problem: %s\n", query, word)
-			return []article{}
+			return []Article{}
 		}
 		if strings.HasPrefix(word, "#") {
 			condition = condition + "list_contains(tags, '" + word[1:] + "') AND "
@@ -191,9 +191,9 @@ func query_articles_db(query string) []article {
 		panic(err.Error())
 	}
 
-	var article_list []article
+	var article_list []Article
 	for article_rows.Next() {
-		var article article
+		var article Article
 		_ = article_rows.Scan(&article.Url, &article.Title, &article.Desc, &article.Date)
 		article.EscapedUrl = url.QueryEscape(article.Url)
 
@@ -207,9 +207,9 @@ func query_articles_db(query string) []article {
 		if err != nil {
 			panic(err.Error())
 		}
-		var comments_array []comments
+		var comments_array []Comments
 		for comment_rows.Next() {
-			var comment comments
+			var comment Comments
 			_ = comment_rows.Scan(&comment.Feed, &comment.Url)
 			comments_array = append(comments_array, comment)
 		}
@@ -268,6 +268,13 @@ func add_tag_db(url string, tag string) {
 	}
 }
 
+func remove_tag_db(url string, tag string) {
+	_, err := db.Query("UPDATE articles SET tags=list_filter(tags, lambda x: x != ?) WHERE url=?", tag, url)
+	if err != nil {
+		panic(err.Error())
+	}
+}
+
 func add_feed_db(url string) {
 	_, err := db.Query("INSERT INTO feeds VALUES(?, '', '', NULL, [])", url)
 	if err != nil {
@@ -275,16 +282,37 @@ func add_feed_db(url string) {
 	}
 }
 
-func get_article_db(article_url string) article {
-	var article article
-	row := db.QueryRow("SELECT url, title, description, pubdate, tags FROM articles WHERE url=?", article_url)
-	var arr duckdb.Composite[[]string]
-	err := row.Scan(&article.Url, &article.Title, &article.Desc, &article.Date, &arr)
-	article.Tags = arr.Get()
+func get_article_db(article_url string) Article {
+	var article Article
+	// I don't think there is any reason for the feed names and comment links to match up to each other
+	// TODO: fix that
+	row := db.QueryRow("SELECT list_filter(list(comments), lambda x: x != NULL), list_filter(list(feeds.title), lambda x: x != NULL), ANY_VALUE(articles.url), ANY_VALUE(articles.title), ANY_VALUE(articles.description), ANY_VALUE(pubdate), ANY_VALUE(articles.tags) FROM articles LEFT JOIN comments ON articles.url=comments.article LEFT JOIN feeds ON comments.feed=feeds.url WHERE articles.url=? GROUP BY articles.url;", article_url)
+	var tags_arr duckdb.Composite[[]string]
+	var comments_arr duckdb.Composite[[]string]
+	var feed_comments_arr duckdb.Composite[[]string]
+	err := row.Scan(&comments_arr, &feed_comments_arr, &article.Url, &article.Title, &article.Desc, &article.Date, &tags_arr)
 	if err != nil {
 		panic(err.Error())
 	}
+	article.Tags = tags_arr.Get()
+
+	comments_str := comments_arr.Get()
+
+	feeds := feed_comments_arr.Get()
+
+	for i, comment := range comments_str {
+		feed := feeds[i]
+		article.Comments = append(article.Comments, Comments{comment, feed})
+	}
+
 	article.EscapedUrl = url.QueryEscape(article.Url)
 
 	return article
+}
+
+func add_bookmark_db(url string, title string) {
+	_, err := db.Query("INSERT OR IGNORE INTO articles VALUES (?, ?, ?, ?, ['bookmark'], FALSE)", url, title, "description", time.Now().Format(time.RFC3339))
+	if err != nil {
+		panic(err.Error())
+	}
 }

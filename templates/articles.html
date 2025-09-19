@@ -2,7 +2,7 @@
     {{$top := .}}
     {{range .Articles}}
         {{$article := .}}
-        <div class="article">
+        <div class="item">
             <a href="/article/{{.EscapedUrl}}"><h1>{{.Title}}</h1></a>
             <a href="{{.Url}}" target="_blank">{{.Url}}</a>
             <p>{{.Date}}</p>
@@ -11,10 +11,11 @@
             {{end}}
             <div class="buttons">
                 {{range $top.FavoriteTags}}
-                    <button class="grow" hx-post="/api/add_tag_mark_read" hx-target="closest .article" hx-swap="delete" hx-vals = '"url": "{{$article.Url}}", "tag": "{{.}}"'>{{.}}</button>
+                    <button class="grow" hx-post="/api/add_tag_mark_read" hx-target="closest .item" hx-swap="delete" hx-vals = '"url": "{{$article.Url}}", "tag": "{{.}}"'>{{.}}</button>
                 {{end}}
-                <button class="plus-button-outer" hx-post="/api/mark_read" hx-target="closest .article" hx-swap="delete" hx-vals = '"url": "{{.Url}}"'><div class="plus-button">×</div></button>
+                <button class="plus-button-outer" hx-post="/api/mark_read" hx-target="closest .item" hx-swap="delete" hx-vals = '"url": "{{.Url}}"'><div class="plus-button">×</div></button>
             </div>
         </div>
     {{end}}
+    {{if eq (len .Articles) 0}}No Unread Articles{{end}}
 </main>

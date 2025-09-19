@@ -3,22 +3,21 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Naarum RSS Reader - Search</title>
+    <title>Naarum RSS Reader - Bookmark</title>
     <link href="/preflight.css" rel="stylesheet">
     <link href="/index.css" rel="stylesheet">
     <script src="/htmx.min.js"></script>
 </head>
 <body>
-    {{template "header.html" "search"}}
+    {{template "header.html" "bookmark"}}
     <main>
         <search class="search">
-            <form hx-post="/api/search" hx-target="#search-results">
-                <input class="text-input" type="text" name="query" placeholder="query..."/>
-                <button type="submit">Search</button>
+            <form hx-post="/api/add_bookmark" hx-target="#result">
+                <input class="text-input" type="text" name="url" placeholder="bookmark url"/>
+                <button type="submit">Add bookmark</button>
             </form>
         </search>
-    <div id="search-results">
-    </div>
+        <div id="result"></div>
 </main>
 </body>
 </html>

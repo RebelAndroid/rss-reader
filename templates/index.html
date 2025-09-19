@@ -9,12 +9,7 @@
     <script src="/htmx.min.js"></script>
 </head>
 <body>
-    <header>
-        <a href="/unread">Unread</a>
-        <a href="/feeds">Feeds</a>
-        <a href="/search">Search</a>
-        <a href="/history">History</a>
-    </header>
+    {{template "header.html" "unread"}}
     {{template "articles.html" .}}
 </body>
 </html>

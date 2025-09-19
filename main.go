@@ -13,23 +13,25 @@ import (
 	_ "github.com/marcboeker/go-duckdb/v2"
 )
 
-type article struct {
+type Article struct {
 	Url        string
 	EscapedUrl string
 	Title      string
 	Desc       string
 	Date       string
-	Comments   []comments
+	Comments   []Comments
 	Tags       []string
 }
 
-type articles struct {
+type Articles struct {
 	FavoriteTags []string
-	Articles     []article
+	Articles     []Article
 }
 
-type comments struct {
-	Url  string
+type Comments struct {
+	// The URL of the comments
+	Url string
+	// The URL of the feed the comments are from
 	Feed string
 }
 
@@ -56,17 +58,25 @@ var htmx_min_js string
 
 var db *sql.DB
 
-// var articles_template *template.Template
+// Page showing unread articles
 var main_template *template.Template
 
+// Page showing a list of feeds and input to add feeds
 var feeds_template *template.Template
 
+// Page showing an individual article
 var article_template *template.Template
 
+// Page showing the search menu
 var search_template *template.Template
 
+// Page showing an input to add bookmarks
+var bookmark_template *template.Template
+
+// API response for search results
 var search_results_template *template.Template
 
+// API response for an individual feed
 var feed_template *template.Template
 
 func main() {
@@ -74,27 +84,32 @@ func main() {
 	defer db.Close()
 	var err error
 
-	main_template, err = template.ParseFiles("templates/index.html", "templates/articles.html")
+	main_template, err = template.ParseFiles("templates/index.html", "templates/articles.html", "templates/header.html")
 	if err != nil {
 		panic(err.Error())
 	}
 
-	feeds_template, err = template.ParseFiles("templates/feeds.html")
+	feeds_template, err = template.ParseFiles("templates/feeds.html", "templates/header.html")
 	if err != nil {
 		panic(err.Error())
 	}
 
-	article_template, err = template.ParseFiles("templates/article.html")
+	article_template, err = template.ParseFiles("templates/article.html", "templates/article-component.html", "templates/header.html")
 	if err != nil {
 		panic(err.Error())
 	}
 
-	search_template, err = template.ParseFiles("templates/search.html")
+	search_template, err = template.ParseFiles("templates/search.html", "templates/header.html")
 	if err != nil {
 		panic(err.Error())
 	}
 
-	search_results_template, err = template.ParseFiles("templates/search-results.html")
+	bookmark_template, err = template.ParseFiles("templates/bookmark.html", "templates/header.html")
+	if err != nil {
+		panic(err.Error())
+	}
+
+	search_results_template, err = template.ParseFiles("templates/search-results.html", "templates/article-component.html")
 	if err != nil {
 		panic(err.Error())
 	}
@@ -138,6 +153,8 @@ func main() {
 
 	mux.HandleFunc("POST /api/search", search_query)
 
+	mux.HandleFunc("POST /api/add_bookmark", add_bookmark)
+
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/unread", http.StatusMovedPermanently)
 	})
@@ -148,6 +165,8 @@ func main() {
 	mux.HandleFunc("/article/{article}", article_handler)
 
 	mux.HandleFunc("/search", search_handler)
+
+	mux.HandleFunc("/bookmark", bookmark_handler)
 
 	go func() {
 		for {

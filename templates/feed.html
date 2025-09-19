@@ -1,7 +1,7 @@
-<div class="article">
+<div class="item">
     <div class="feed-header">
         <a href="{{.SiteUrl}}"><h1>{{.Title}}</h1></a>
-        <button class="plus-button-outer" hx-post="/api/remove_feed/" hx-target="closest .article" hx-swap="delete" hx-vals = '"url": "{{.FeedUrl}}"'><div class="plus-button">×</div></button>
+        <button class="plus-button-outer" hx-post="/api/remove_feed/" hx-target="closest .item" hx-swap="delete" hx-vals = '"url": "{{.FeedUrl}}"'><div class="plus-button">×</div></button>
     </div>
     <p>{{.Description}}</p>
 </div>

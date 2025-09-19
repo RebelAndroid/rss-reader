@@ -1,0 +1,6 @@
+<header>
+    <a {{if eq . "unread"}} class="current-tab"{{end}} href="/unread">Unread</a>
+    <a {{if eq . "feeds"}} class="current-tab"{{end}} href="/feeds">Feeds</a>
+    <a {{if eq . "search"}} class="current-tab"{{end}} href="/search">Search</a>
+    <a {{if eq . "bookmark"}} class="current-tab"{{end}} href="/bookmark">Bookmark</a>
+</header>

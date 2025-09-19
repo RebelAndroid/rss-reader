@@ -1,10 +1,5 @@
 {{range .}}
-    <div class="article">
-        <a href="/article/{{.EscapedUrl}}"><h1>{{.Title}}</h1></a>
-        <a href="{{.Url}}" target="_blank">{{.Url}}</a>
-        <p>{{.Date}}</p>
-        {{range .Comments}}
-            <a href="{{.Url}}" target="_blank">Comments on {{.Feed}}</a>
-        {{end}}
-    </div>
+     {{template "article-component.html" .}}
 {{end}}
+
+{{if eq (len .) 0}}Search Returned No Results{{end}}
