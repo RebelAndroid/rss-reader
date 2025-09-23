@@ -12,78 +12,88 @@ import (
 	"github.com/mmcdole/gofeed/rss"
 )
 
-func remove_feed(w http.ResponseWriter, r *http.Request) {
+func removeFeed(w http.ResponseWriter, r *http.Request) {
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
-		panic(err.Error())
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte(err.Error()))
 	}
 	parsed, err := url.ParseQuery(string(body))
 	if err != nil {
-		panic(err.Error())
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte(err.Error()))
 	}
 
 	url := parsed["url"][0]
-	remove_feed_db(url)
+	removeFeedDb(url)
 }
 
-func mark_read(w http.ResponseWriter, r *http.Request) {
+func markRead(w http.ResponseWriter, r *http.Request) {
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
-		panic(err.Error())
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte(err.Error()))
 	}
 	parsed, err := url.ParseQuery(string(body))
 	if err != nil {
-		panic(err.Error())
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte(err.Error()))
 	}
 
 	url := parsed["url"][0]
-	mark_read_db(url)
+	markReadDb(url)
 }
 
-func add_tag(w http.ResponseWriter, r *http.Request) {
+func addTag(w http.ResponseWriter, r *http.Request) {
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
-		panic(err.Error())
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte(err.Error()))
 	}
 	parsed, err := url.ParseQuery(string(body))
 	if err != nil {
-		panic(err.Error())
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte(err.Error()))
 	}
 
 	url := parsed["url"][0]
 	tag := parsed["tag"][0]
 	if tag[0] == '-' {
-		remove_tag_db(url, tag[1:])
+		removeTagDb(url, tag[1:])
 	} else {
-		add_tag_db(url, tag)
+		addTagDb(url, tag)
 	}
 }
 
-func add_tag_mark_read(w http.ResponseWriter, r *http.Request) {
+func addTagMarkRead(w http.ResponseWriter, r *http.Request) {
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
-		panic(err.Error())
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte(err.Error()))
 	}
 	parsed, err := url.ParseQuery(string(body))
 	if err != nil {
-		panic(err.Error())
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte(err.Error()))
 	}
 
 	url := parsed["url"][0]
 	tag := parsed["tag"][0]
-	add_tag_db(url, tag)
-	mark_read_db(url)
+	addTagDb(url, tag)
+	markReadDb(url)
 }
 
-func add_feed(w http.ResponseWriter, r *http.Request) {
+func addFeed(w http.ResponseWriter, r *http.Request) {
 	start := time.Now()
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
-		panic(err.Error())
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte(err.Error()))
 	}
 	parsed, err := url.ParseQuery(string(body))
 	if err != nil {
-		panic(err.Error())
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte(err.Error()))
 	}
 
 	url := parsed["url"][0]
@@ -107,9 +117,9 @@ func add_feed(w http.ResponseWriter, r *http.Request) {
 				fmt.Println("unable to read feed body")
 				continue
 			}
-			add_feed_db(url + path)
+			addFeedDb(url + path)
 			update_feed(db, url+path)
-			feed_template.Execute(w, get_feed_db(url+path))
+			feed_template.Execute(w, getFeedDb(url+path))
 			break
 		} else if err != nil {
 			fmt.Printf("got err: %s status code: %d\n", err.Error(), resp.StatusCode)
@@ -121,31 +131,35 @@ func add_feed(w http.ResponseWriter, r *http.Request) {
 	fmt.Println("ran /add/feed in " + end.Sub(start).String())
 }
 
-func search_query(w http.ResponseWriter, r *http.Request) {
+func searchQuery(w http.ResponseWriter, r *http.Request) {
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
-		panic(err.Error())
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte(err.Error()))
 	}
 	parsed, err := url.ParseQuery(string(body))
 	if err != nil {
-		panic(err.Error())
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte(err.Error()))
 	}
 
 	query := parsed["query"][0]
 
-	article_list := query_articles_db(query)
+	articleList := queryArticlesDb(query)
 
-	search_results_template.Execute(w, article_list)
+	searchResultsTemplate.Execute(w, articleList)
 }
 
-func add_bookmark(w http.ResponseWriter, r *http.Request) {
+func addBookmark(w http.ResponseWriter, r *http.Request) {
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
-		panic(err.Error())
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte(err.Error()))
 	}
 	parsed, err := url.ParseQuery(string(body))
 	if err != nil {
-		panic(err.Error())
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte(err.Error()))
 	}
 
 	url := parsed["url"][0]
@@ -158,88 +172,94 @@ func add_bookmark(w http.ResponseWriter, r *http.Request) {
 
 	resp, err := http.Get(url)
 	if err != nil {
-		panic(err.Error())
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte(err.Error()))
 	}
-	http_body, err := io.ReadAll(resp.Body)
+	httpBody, err := io.ReadAll(resp.Body)
 	if err != nil {
-		panic(err.Error())
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte(err.Error()))
 	}
 
 	regex, err := regexp.Compile("<title>.+</title>")
 	if err != nil {
-		panic(err.Error())
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte(err.Error()))
 	}
 
 	title := ""
-	title_bytes := regex.Find(http_body)
-	if title_bytes != nil {
-		title = string(title_bytes[7 : len(title_bytes)-8])
+	titleBytes := regex.Find(httpBody)
+	if titleBytes != nil {
+		title = string(titleBytes[7 : len(titleBytes)-8])
 	}
 	fmt.Println(title)
 
-	add_bookmark_db(url, title)
+	addBookmarkDb(url, title)
 
 	w.Write([]byte("Bookmark added successfully"))
 }
 
-func unread_handler(w http.ResponseWriter, r *http.Request) {
+func unreadHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "GET" {
 		println("unexpected method")
 		return
 	}
 
-	article_list := unread_articles_db(10)
+	articleList := unreadArticlesDb(10)
 
 	articles := Articles{
 		FavoriteTags: []string{"later", "favorite", "reference", "archive"},
-		Articles:     article_list,
+		Articles:     articleList,
 	}
 
-	err := main_template.Execute(w, articles)
+	err := mainTemplate.Execute(w, articles)
 	if err != nil {
-		panic(err.Error())
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte(err.Error()))
 	}
 }
 
-func feeds_handler(w http.ResponseWriter, r *http.Request) {
+func feedsHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "GET" {
 		println("unexpected method")
 		return
 	}
 
-	feeds := feeds_db()
+	feeds := feedsDb()
 
-	err := feeds_template.Execute(w, feeds)
+	err := feedsTemplate.Execute(w, feeds)
 	if err != nil {
-		panic(err.Error())
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte(err.Error()))
 	}
 }
 
-func article_handler(w http.ResponseWriter, r *http.Request) {
+func articleHandler(w http.ResponseWriter, r *http.Request) {
 	article_url := r.PathValue("article")
 	if article_url == "" {
 		panic("couldn't get article out of path")
 	}
-	article := get_article_db(article_url)
+	article := getArticleDb(article_url)
 
-	article_template.Execute(w, article)
+	articleTemplate.Execute(w, article)
 }
 
-func search_handler(w http.ResponseWriter, r *http.Request) {
+func searchHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "GET" {
 		println("unexpected method")
 		return
 	}
 
-	article_list := read_articles_db(20)
+	articleList := readArticlesDb(20)
 
-	err := search_template.Execute(w, article_list)
+	err := search_template.Execute(w, articleList)
 	if err != nil {
-		panic(err.Error())
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte(err.Error()))
 	}
 }
 
-func bookmark_handler(w http.ResponseWriter, r *http.Request) {
+func bookmarkHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "GET" {
 		println("unexpected method")
 		return
@@ -247,6 +267,7 @@ func bookmark_handler(w http.ResponseWriter, r *http.Request) {
 
 	err := bookmark_template.Execute(w, nil)
 	if err != nil {
-		panic(err.Error())
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte(err.Error()))
 	}
 }

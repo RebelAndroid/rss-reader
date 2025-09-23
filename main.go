@@ -2,13 +2,15 @@ package main
 
 import (
 	"database/sql"
+	"embed"
 	"fmt"
 	"html/template"
 	"log"
+	"log/slog"
+	"mime"
 	"net/http"
+	"path/filepath"
 	"time"
-
-	_ "embed"
 
 	_ "github.com/marcboeker/go-duckdb/v2"
 )
@@ -44,28 +46,22 @@ type feed struct {
 	Description string
 }
 
-//go:embed static/index.css
-var index_css string
+//go:embed static/*
+var static embed.FS
 
-//go:embed static/index.js
-var index_js string
-
-//go:embed static/preflight.css
-var preflight_css string
-
-//go:embed static/htmx.min.js
-var htmx_min_js string
+//go:embed templates/*
+var templates embed.FS
 
 var db *sql.DB
 
 // Page showing unread articles
-var main_template *template.Template
+var mainTemplate *template.Template
 
 // Page showing a list of feeds and input to add feeds
-var feeds_template *template.Template
+var feedsTemplate *template.Template
 
 // Page showing an individual article
-var article_template *template.Template
+var articleTemplate *template.Template
 
 // Page showing the search menu
 var search_template *template.Template
@@ -74,99 +70,94 @@ var search_template *template.Template
 var bookmark_template *template.Template
 
 // API response for search results
-var search_results_template *template.Template
+var searchResultsTemplate *template.Template
 
 // API response for an individual feed
 var feed_template *template.Template
 
 func main() {
-	db = init_db()
-	defer db.Close()
 	var err error
-
-	main_template, err = template.ParseFiles("templates/index.html", "templates/articles.html", "templates/header.html")
+	db, err = initDb()
 	if err != nil {
-		panic(err.Error())
+		panic(err)
 	}
 
-	feeds_template, err = template.ParseFiles("templates/feeds.html", "templates/header.html")
+	mainTemplate, err = template.ParseFS(templates, "templates/index.html", "templates/articles.html", "templates/header.html")
 	if err != nil {
-		panic(err.Error())
+		panic(err)
 	}
 
-	article_template, err = template.ParseFiles("templates/article.html", "templates/article-component.html", "templates/header.html")
+	feedsTemplate, err = template.ParseFS(templates, "templates/feeds.html", "templates/header.html")
 	if err != nil {
-		panic(err.Error())
+		panic(err)
 	}
 
-	search_template, err = template.ParseFiles("templates/search.html", "templates/header.html")
+	articleTemplate, err = template.ParseFS(templates, "templates/article.html", "templates/article-component.html", "templates/header.html")
 	if err != nil {
-		panic(err.Error())
+		panic(err)
 	}
 
-	bookmark_template, err = template.ParseFiles("templates/bookmark.html", "templates/header.html")
+	search_template, err = template.ParseFS(templates, "templates/search.html", "templates/header.html")
 	if err != nil {
-		panic(err.Error())
+		panic(err)
 	}
 
-	search_results_template, err = template.ParseFiles("templates/search-results.html", "templates/article-component.html")
+	bookmark_template, err = template.ParseFS(templates, "templates/bookmark.html", "templates/header.html")
 	if err != nil {
-		panic(err.Error())
+		panic(err)
 	}
 
-	feed_template, err = template.ParseFiles("templates/feed.html")
+	searchResultsTemplate, err = template.ParseFS(templates, "templates/search-results.html", "templates/article-component.html")
 	if err != nil {
-		panic(err.Error())
+		panic(err)
+	}
+
+	feed_template, err = template.ParseFS(templates, "templates/feed.html")
+	if err != nil {
+		panic(err)
 	}
 
 	mux := http.NewServeMux()
 
-	mux.HandleFunc("GET /index.css", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Add("Content-Type", "text/css")
-		fmt.Fprint(w, index_css)
-	})
+	mux.HandleFunc("POST /api/mark_read", markRead)
 
-	mux.HandleFunc("GET /preflight.css", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Add("Content-Type", "text/css")
-		fmt.Fprint(w, preflight_css)
-	})
+	mux.HandleFunc("POST /api/remove_feed/", removeFeed)
 
-	mux.HandleFunc("GET /index.js", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Add("Content-Type", "application/javascript")
-		fmt.Fprint(w, index_js)
-	})
+	mux.HandleFunc("POST /api/add_tag/", addTag)
 
-	mux.HandleFunc("GET /htmx.min.js", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Add("Content-Type", "application/javascript")
-		fmt.Fprint(w, htmx_min_js)
-	})
+	mux.HandleFunc("POST /api/add_tag_mark_read", addTagMarkRead)
 
-	mux.HandleFunc("POST /api/mark_read", mark_read)
+	mux.HandleFunc("POST /api/add_feed", addFeed)
 
-	mux.HandleFunc("POST /api/remove_feed/", remove_feed)
+	mux.HandleFunc("POST /api/search", searchQuery)
 
-	mux.HandleFunc("POST /api/add_tag/", add_tag)
-
-	mux.HandleFunc("POST /api/add_tag_mark_read", add_tag_mark_read)
-
-	mux.HandleFunc("POST /api/add_feed", add_feed)
-
-	mux.HandleFunc("POST /api/search", search_query)
-
-	mux.HandleFunc("POST /api/add_bookmark", add_bookmark)
+	mux.HandleFunc("POST /api/add_bookmark", addBookmark)
 
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		http.Redirect(w, r, "/unread", http.StatusMovedPermanently)
+		if r.URL.Path == "/" {
+			http.Redirect(w, r, "/unread", http.StatusTemporaryRedirect)
+			return
+		}
+		file, err := static.ReadFile("static" + r.URL.Path)
+		if err == nil {
+			slog.Info("responding to", "path", r.URL.Path, "mime", mime.TypeByExtension(filepath.Ext(r.URL.Path)))
+			w.Header().Set("Content-Type", mime.TypeByExtension(filepath.Ext(r.URL.Path)))
+			w.Write(file)
+			return
+		}
+
+		w.WriteHeader(http.StatusNotFound)
+		w.Write([]byte("404"))
 	})
-	mux.HandleFunc("/unread", unread_handler)
+	mux.HandleFunc("/unread", unreadHandler)
 
-	mux.HandleFunc("/feeds", feeds_handler)
+	mux.HandleFunc("/feeds", feedsHandler)
 
-	mux.HandleFunc("/article/{article}", article_handler)
+	mux.HandleFunc("/article/{article}", articleHandler)
 
-	mux.HandleFunc("/search", search_handler)
+	mux.HandleFunc("/search", searchHandler)
 
-	mux.HandleFunc("/bookmark", bookmark_handler)
+	mux.HandleFunc("/bookmark", bookmarkHandler)
 
 	go func() {
 		for {
