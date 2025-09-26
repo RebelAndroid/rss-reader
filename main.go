@@ -79,6 +79,7 @@ var feed_template *template.Template
 var articleComponentTemplate *template.Template
 
 func main() {
+	slog.SetLogLoggerLevel(slog.LevelDebug)
 	var err error
 	db, err = initDb()
 	if err != nil {
@@ -150,7 +151,7 @@ func main() {
 		}
 		file, err := static.ReadFile("static" + r.URL.Path)
 		if err == nil {
-			slog.Info("responding to", "path", r.URL.Path, "mime", mime.TypeByExtension(filepath.Ext(r.URL.Path)))
+			slog.Debug("responding to", "path", r.URL.Path, "mime", mime.TypeByExtension(filepath.Ext(r.URL.Path)))
 			w.Header().Set("Content-Type", mime.TypeByExtension(filepath.Ext(r.URL.Path)))
 			w.Write(file)
 			return

@@ -3,6 +3,7 @@ package main
 import (
 	"database/sql"
 	"fmt"
+	"log/slog"
 	"net/url"
 	"regexp"
 	"strings"
@@ -207,6 +208,8 @@ func queryArticlesDb(query string) []Article {
 		}
 		article.Date = date.Format(time.RFC1123)
 
+		slog.Info("queryArticles", "date", article.Date)
+
 		commentRows, err := db.Query("SELECT title, comments FROM comments JOIN feeds ON feed=url WHERE article=?", article.Url)
 		if err != nil {
 			panic(err)
@@ -310,6 +313,14 @@ func getArticleDb(article_url string) Article {
 	}
 
 	article.EscapedUrl = url.QueryEscape(article.Url)
+
+	date, err := time.Parse(time.RFC3339, article.Date)
+	if err != nil {
+		panic(err)
+	}
+	article.Date = date.Format(time.RFC1123)
+
+	slog.Debug("queryArticles", "date", article.Date)
 
 	return article
 }
