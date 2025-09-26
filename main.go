@@ -75,6 +75,9 @@ var searchResultsTemplate *template.Template
 // API response for an individual feed
 var feed_template *template.Template
 
+// component for a single article
+var articleComponentTemplate *template.Template
+
 func main() {
 	var err error
 	db, err = initDb()
@@ -117,6 +120,11 @@ func main() {
 		panic(err)
 	}
 
+	articleComponentTemplate, err = template.ParseFS(templates, "templates/article-component.html")
+	if err != nil {
+		panic(err)
+	}
+
 	mux := http.NewServeMux()
 
 	mux.HandleFunc("POST /api/mark_read", markRead)
@@ -132,6 +140,8 @@ func main() {
 	mux.HandleFunc("POST /api/search", searchQuery)
 
 	mux.HandleFunc("POST /api/add_bookmark", addBookmark)
+
+	mux.HandleFunc("POST /api/import_bookmarks", importBookmarks)
 
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path == "/" {

@@ -18,6 +18,10 @@
             </form>
         </search>
         <div id="result"></div>
+        <form hx-post="/api/import_bookmarks" enctype="multipart/form-data">
+            <input name="file" class="file-upload" type="file" placeholder="import bookmarks">
+            <button type="submit">Import bookmarks</button>
+        </form>
 </main>
 </body>
 </html>

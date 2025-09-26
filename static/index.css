@@ -143,3 +143,15 @@ header > a {
 .current-tab {
         color: oklch(62.7% 0.194 149.214); /* Green 600 */
 }
+
+.file-upload {
+        background-color: oklch(87% 0 0); /* neutral 300*/
+        border: 1px oklch(70.8% 0 0) solid; /* neutral 400 */
+        padding: 0.5em;
+        border-radius: 4px;
+        cursor: pointer;
+}
+
+.file-upload:hover {
+        background-color: oklch(70.8% 0 0); /* neutral 400*/
+}

@@ -10,7 +10,7 @@
         <p class="tag">{{.}}</p>
         {{end}}
     </div>
-    <form hx-post="/api/add_tag/" hx-vals='"url": "{{.Url}}"' hx-swap="none">
+    <form hx-post="/api/add_tag/" hx-vals='"url": "{{.Url}}"' hx-swap="outerHTML" hx-target="closest .item">
         <input class="text-input" name="tag" type="text" value="" placeholder="tag or -tag" />
         <button type="submit">Add Tag</button>
     </form>

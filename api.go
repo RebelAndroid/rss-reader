@@ -3,6 +3,9 @@ package main
 import (
 	"fmt"
 	"io"
+	"log/slog"
+	"mime"
+	"mime/multipart"
 	"net/http"
 	"net/url"
 	"regexp"
@@ -63,6 +66,10 @@ func addTag(w http.ResponseWriter, r *http.Request) {
 	} else {
 		addTagDb(url, tag)
 	}
+
+	article := getArticleDb(url)
+
+	articleComponentTemplate.Execute(w, article)
 }
 
 func addTagMarkRead(w http.ResponseWriter, r *http.Request) {
@@ -197,6 +204,38 @@ func addBookmark(w http.ResponseWriter, r *http.Request) {
 	addBookmarkDb(url, title)
 
 	w.Write([]byte("Bookmark added successfully"))
+}
+
+func importBookmarks(w http.ResponseWriter, r *http.Request) {
+	_, params, err := mime.ParseMediaType(r.Header.Get("Content-Type"))
+	if err != nil {
+		slog.ErrorContext(r.Context(), "request lacks Content-Type header", "err", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte(err.Error()))
+	}
+	mr := multipart.NewReader(r.Body, params["boundary"])
+	// 4MiB should be enough TODO: make this configurable
+	form, err := mr.ReadForm(4 * 1024 * 1024)
+	if err != nil {
+		slog.ErrorContext(r.Context(), "error parsing form", "err", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte(err.Error()))
+	}
+	fileHeaders := form.File["file"]
+	fmt.Println(len(fileHeaders))
+	file, err := fileHeaders[0].Open()
+	if err != nil {
+		slog.ErrorContext(r.Context(), "error opening form file", "err", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte(err.Error()))
+	}
+	bytes, err := io.ReadAll(file)
+	if err != nil {
+		slog.ErrorContext(r.Context(), "error opening form file", "err", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte(err.Error()))
+	}
+	fmt.Println(string(bytes))
 }
 
 func unreadHandler(w http.ResponseWriter, r *http.Request) {

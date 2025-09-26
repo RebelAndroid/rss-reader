@@ -160,7 +160,7 @@ func readArticlesDb(limit int) []Article {
 	return articleList
 }
 
-func queryArticlesDb(query string) []Article {
+func conditionFromQuery(query string) (string, error) {
 	r := regexp.MustCompile(`^#?([a-z]|[A-Z]|[0-9])+$`)
 
 	parts := strings.Split(query, " ")
@@ -168,8 +168,7 @@ func queryArticlesDb(query string) []Article {
 	for _, word := range parts {
 		fmt.Println(word)
 		if !r.MatchString(word) {
-			fmt.Printf("Bad search query: %s, problem: %s\n", query, word)
-			return []Article{}
+			return "", fmt.Errorf("bad search query: %s, problem: %s", query, word)
 		}
 		if strings.HasPrefix(word, "#") {
 			condition = condition + "list_contains(tags, '" + word[1:] + "') AND "
@@ -177,12 +176,19 @@ func queryArticlesDb(query string) []Article {
 			condition = condition + "title ILIKE '%" + word + "%' AND "
 		}
 	}
-
 	condition = condition + "true"
+	return condition, nil
+}
+
+func queryArticlesDb(query string) []Article {
+	condition, err := conditionFromQuery(query)
+	if err != nil {
+		panic(err)
+	}
 
 	fmt.Println("condition: " + condition)
 
-	articleRows, err := db.Query("SELECT url, title, description,pubdate FROM articles WHERE " + condition)
+	articleRows, err := db.Query("SELECT url, title, description, pubdate, tags FROM articles WHERE " + condition)
 	if err != nil {
 		panic(err)
 	}
@@ -190,7 +196,9 @@ func queryArticlesDb(query string) []Article {
 	var articleList []Article
 	for articleRows.Next() {
 		var article Article
-		_ = articleRows.Scan(&article.Url, &article.Title, &article.Desc, &article.Date)
+		var tagsArr duckdb.Composite[[]string]
+		_ = articleRows.Scan(&article.Url, &article.Title, &article.Desc, &article.Date, &tagsArr)
+		article.Tags = tagsArr.Get()
 		article.EscapedUrl = url.QueryEscape(article.Url)
 
 		date, err := time.Parse(time.RFC3339, article.Date)
