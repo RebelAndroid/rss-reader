@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
 	"log/slog"
@@ -206,38 +207,6 @@ func addBookmark(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte("Bookmark added successfully"))
 }
 
-func importBookmarks(w http.ResponseWriter, r *http.Request) {
-	_, params, err := mime.ParseMediaType(r.Header.Get("Content-Type"))
-	if err != nil {
-		slog.ErrorContext(r.Context(), "request lacks Content-Type header", "err", err)
-		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte(err.Error()))
-	}
-	mr := multipart.NewReader(r.Body, params["boundary"])
-	// 4MiB should be enough TODO: make this configurable
-	form, err := mr.ReadForm(4 * 1024 * 1024)
-	if err != nil {
-		slog.ErrorContext(r.Context(), "error parsing form", "err", err)
-		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte(err.Error()))
-	}
-	fileHeaders := form.File["file"]
-	fmt.Println(len(fileHeaders))
-	file, err := fileHeaders[0].Open()
-	if err != nil {
-		slog.ErrorContext(r.Context(), "error opening form file", "err", err)
-		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte(err.Error()))
-	}
-	bytes, err := io.ReadAll(file)
-	if err != nil {
-		slog.ErrorContext(r.Context(), "error opening form file", "err", err)
-		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte(err.Error()))
-	}
-	fmt.Println(string(bytes))
-}
-
 func unreadHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "GET" {
 		println("unexpected method")
@@ -309,4 +278,71 @@ func bookmarkHandler(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 		w.Write([]byte(err.Error()))
 	}
+}
+
+type Bookmark struct {
+	URI   string `json:"uri"`
+	Title string `json:"title"`
+}
+
+type BookmarkFolder struct {
+	Children []Bookmark `json:"children"`
+}
+
+type Bookmarks struct {
+	Guid     string           `json:"guid"`
+	Children []BookmarkFolder `json:"children"`
+}
+
+func importBookmarks(w http.ResponseWriter, r *http.Request) {
+	slog.Debug("importing bookmarks")
+	_, params, err := mime.ParseMediaType(r.Header.Get("Content-Type"))
+	if err != nil {
+		slog.ErrorContext(r.Context(), "request lacks Content-Type header", "err", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte(err.Error()))
+	}
+	mr := multipart.NewReader(r.Body, params["boundary"])
+	// 4MiB should be enough TODO: make this configurable
+	form, err := mr.ReadForm(4 * 1024 * 1024)
+	if err != nil {
+		slog.ErrorContext(r.Context(), "error parsing form", "err", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte(err.Error()))
+	}
+	fileHeaders := form.File["file"]
+	fmt.Println(len(fileHeaders))
+	file, err := fileHeaders[0].Open()
+	if err != nil {
+		slog.ErrorContext(r.Context(), "error opening form file", "err", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte(err.Error()))
+	}
+	bytes, err := io.ReadAll(file)
+	if err != nil {
+		slog.ErrorContext(r.Context(), "error opening form file", "err", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte(err.Error()))
+	}
+
+	var bookmarks Bookmarks
+	err = json.Unmarshal(bytes, &bookmarks)
+	if err != nil {
+		slog.Error("error opening form file", "err", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte(err.Error()))
+	}
+
+	slog.Debug("parsed bookmarks", "folders", len(bookmarks.Children), "guid", bookmarks.Guid)
+
+	for _, folder := range bookmarks.Children {
+		slog.Debug("parsed bookmarks folder", "bookmarks", len(folder.Children))
+		for _, bookmark := range folder.Children {
+			slog.Debug("got bookmark", "bookmark", bookmark)
+			if strings.HasPrefix(bookmark.URI, "http") {
+				addBookmarkDb(bookmark.URI, bookmark.Title)
+			}
+		}
+	}
+
 }

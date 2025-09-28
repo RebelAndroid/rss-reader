@@ -157,6 +157,8 @@ func main() {
 			return
 		}
 
+		slog.Error("Page not found", "url", r.URL.String())
+
 		w.WriteHeader(http.StatusNotFound)
 		w.Write([]byte("404"))
 	})
