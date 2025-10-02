@@ -115,14 +115,14 @@ func addFeed(w http.ResponseWriter, r *http.Request) {
 	paths := []string{"", "/rss", "/index.xml", "/feed"}
 
 	for _, path := range paths {
-		fmt.Println("trying path: " + string(url+path))
+		slog.DebugContext(r.Context(), "trying path: "+string(url+path))
 		resp, err := http.Get(url + path)
 		if err == nil && resp.StatusCode == 200 {
-			fmt.Println("success path: " + string(url+path))
+			slog.DebugContext(r.Context(), "got response on path: "+string(url+path))
 			parser := rss.Parser{}
 			_, err = parser.Parse(resp.Body)
 			if err != nil {
-				fmt.Println("unable to read feed body")
+				slog.DebugContext(r.Context(), "unable to read feed body")
 				continue
 			}
 			addFeedDb(url + path)
@@ -130,13 +130,13 @@ func addFeed(w http.ResponseWriter, r *http.Request) {
 			feed_template.Execute(w, getFeedDb(url+path))
 			break
 		} else if err != nil {
-			fmt.Printf("got err: %s status code: %d\n", err.Error(), resp.StatusCode)
+			slog.DebugContext(r.Context(), "got err: %s status code: %d\n", err.Error(), resp.StatusCode)
 		} else {
-			fmt.Printf("got status code: %d\n", resp.StatusCode)
+			slog.DebugContext(r.Context(), "got status code: %d\n", resp.StatusCode)
 		}
 	}
 	end := time.Now()
-	fmt.Println("ran /add/feed in " + end.Sub(start).String())
+	slog.DebugContext(r.Context(), "ran /add/feed in "+end.Sub(start).String())
 }
 
 func searchQuery(w http.ResponseWriter, r *http.Request) {
@@ -161,38 +161,44 @@ func searchQuery(w http.ResponseWriter, r *http.Request) {
 func addBookmark(w http.ResponseWriter, r *http.Request) {
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
+		slog.ErrorContext(r.Context(), "failed to read request body")
 		w.WriteHeader(http.StatusInternalServerError)
 		w.Write([]byte(err.Error()))
 	}
 	parsed, err := url.ParseQuery(string(body))
 	if err != nil {
+		slog.ErrorContext(r.Context(), "failed to get query parameters from url")
 		w.WriteHeader(http.StatusInternalServerError)
 		w.Write([]byte(err.Error()))
 	}
 
 	url := parsed["url"][0]
 
-	if !strings.HasPrefix(url, "https://") || !strings.HasPrefix(url, "http://") {
+	if !strings.HasPrefix(url, "https://") && !strings.HasPrefix(url, "http://") {
 		url = "https://" + url
 	}
 
-	fmt.Println(url)
-
 	resp, err := http.Get(url)
 	if err != nil {
+		slog.ErrorContext(r.Context(), "failed to get bookmark website", "url", url, "err", err.Error())
 		w.WriteHeader(http.StatusInternalServerError)
 		w.Write([]byte(err.Error()))
+		return
 	}
 	httpBody, err := io.ReadAll(resp.Body)
 	if err != nil {
+		slog.ErrorContext(r.Context(), "failed to read response body")
 		w.WriteHeader(http.StatusInternalServerError)
 		w.Write([]byte(err.Error()))
+		return
 	}
 
-	regex, err := regexp.Compile("<title>.+</title>")
+	regex, err := regexp.Compile("<title>(.|\n)*</title>")
 	if err != nil {
+		slog.ErrorContext(r.Context(), "failed to compile regex in addBookmark")
 		w.WriteHeader(http.StatusInternalServerError)
 		w.Write([]byte(err.Error()))
+		return
 	}
 
 	title := ""
@@ -200,7 +206,8 @@ func addBookmark(w http.ResponseWriter, r *http.Request) {
 	if titleBytes != nil {
 		title = string(titleBytes[7 : len(titleBytes)-8])
 	}
-	fmt.Println(title)
+
+	slog.DebugContext(r.Context(), "extracted from bookmark", "title", title, "titleBytes", string(titleBytes))
 
 	addBookmarkDb(url, title)
 
