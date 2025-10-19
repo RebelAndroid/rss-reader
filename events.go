@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 	"time"
 
@@ -52,8 +53,8 @@ func update_feed(db *sql.DB, url string) {
 
 	resp, err := client.Do(req)
 	if err != nil {
-		println(err.Error())
-		panic("unable to get feed")
+		slog.Error("unable to get feed", "feed", url, "error", err.Error())
+		return
 	}
 	defer resp.Body.Close()
 
@@ -64,16 +65,15 @@ func update_feed(db *sql.DB, url string) {
 	fp := rss.Parser{}
 	feed, err := fp.Parse(resp.Body)
 	if err != nil {
-		println(err.Error())
-		panic("feed is malformed")
+		slog.Error("unable to parse feed", "feed", url, "error", err.Error())
 	}
 	// update the title, description, and update time of the feed
 	_, err = db.Query("INSERT INTO feeds VALUES(?, ?, ?, current_localtimestamp(), []) "+
 		"ON CONFLICT DO UPDATE SET title=EXCLUDED.title, description=EXCLUDED.description, last_updated=EXCLUDED.last_updated",
 		url, feed.Title, feed.Description)
 	if err != nil {
-		println(err.Error())
-		panic("unable to update feed properties")
+		slog.Error("unable to update feed properties", "feed", url, "error", err.Error())
+		return
 	}
 
 	for i := 0; i < len(feed.Items); i++ {
@@ -83,8 +83,8 @@ func update_feed(db *sql.DB, url string) {
 
 		_, err = db.Query("INSERT OR IGNORE INTO articles VALUES (?, ?, ?, [], FALSE, FALSE)", article, title, item.PubDateParsed)
 		if err != nil {
-			println(err.Error())
-			panic("unable to set insert article")
+			slog.Error("unable to add article", "feed", url, "article", article, "error", err.Error())
+			continue
 		}
 
 		if len(item.Comments) == 0 {
@@ -93,8 +93,8 @@ func update_feed(db *sql.DB, url string) {
 
 		_, err = db.Query("INSERT OR IGNORE INTO comments VALUES (?, ?, ?)", article, url, item.Comments)
 		if err != nil {
-			println(err.Error())
-			panic("unable to set insert comments")
+			slog.Error("unable to add comments", "feed", url, "article", article, "comments", item.Comments, "error", err.Error())
+			continue
 		}
 	}
 }
