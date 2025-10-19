@@ -8,6 +8,7 @@ RUN go mod download
 
 COPY static ./static
 COPY templates ./templates
+COPY migrations ./migrations
 
 COPY api.go .
 COPY db.go .

@@ -2,10 +2,10 @@ package main
 
 import (
 	"database/sql"
+	"embed"
 	"fmt"
 	"log/slog"
 	"net/url"
-	"os"
 	"regexp"
 	"strings"
 	"time"
@@ -13,8 +13,11 @@ import (
 	"github.com/marcboeker/go-duckdb/v2"
 )
 
+//go:embed migrations/*
+var migrations embed.FS
+
 func runSQL(db *sql.DB, filename string) error {
-	content, err := os.ReadFile(filename)
+	content, err := migrations.ReadFile(filename)
 	if err != nil {
 		return err
 	}
