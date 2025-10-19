@@ -3,7 +3,6 @@ package main
 import (
 	"database/sql"
 	"embed"
-	"fmt"
 	"html/template"
 	"log"
 	"log/slog"
@@ -19,7 +18,6 @@ type Article struct {
 	Url        string
 	EscapedUrl string
 	Title      string
-	Desc       string
 	Date       string
 	Comments   []Comments
 	Tags       []string
@@ -175,11 +173,19 @@ func main() {
 	go func() {
 		for {
 			update_feeds(db)
-			fmt.Println("updating all feeds")
+			slog.Info("updating all feeds")
 			time.Sleep(60 * 60 * time.Second)
 		}
 	}()
 
-	fmt.Println("server starting")
+	go func() {
+		for {
+			archive_pages(db)
+			slog.Info("archiving pages")
+			time.Sleep(60 * 60 * time.Second)
+		}
+	}()
+
+	slog.Info("server starting")
 	log.Fatal(http.ListenAndServe(":8080", mux))
 }

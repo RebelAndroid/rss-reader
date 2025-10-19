@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net/url"
+	"os"
 	"regexp"
 	"strings"
 	"time"
@@ -12,47 +13,32 @@ import (
 	"github.com/marcboeker/go-duckdb/v2"
 )
 
+func runSQL(db *sql.DB, filename string) error {
+	content, err := os.ReadFile(filename)
+	if err != nil {
+		return err
+	}
+
+	_, err = db.Exec(string(content))
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 func initDb() (*sql.DB, error) {
 	db, err := sql.Open("duckdb", "data/data.db")
 	if err != nil {
 		return nil, err
 	}
 
-	_, err = db.Query("CREATE TABLE IF NOT EXISTS feeds" +
-		"(url STRING PRIMARY KEY, " +
-		"title STRING NOT NULL, " +
-		"description STRING NOT NULL, " +
-		"last_updated TIMESTAMP," +
-		"tags STRING[])")
+	err = runSQL(db, "migrations/0.sql")
 	if err != nil {
-		return nil, fmt.Errorf("failed to create table feeds: %v", err)
+		return nil, err
 	}
-
-	_, err = db.Query("CREATE TABLE IF NOT EXISTS tags " +
-		"(name STRING NOT NULL PRIMARY KEY," +
-		"favorite BOOL NOT NULL)")
+	err = runSQL(db, "migrations/1.sql")
 	if err != nil {
-		return nil, fmt.Errorf("failed to create table tags: %v", err)
-	}
-
-	_, err = db.Query("CREATE TABLE IF NOT EXISTS articles " +
-		"(url STRING NOT NULL PRIMARY KEY, " +
-		"title STRING NOT NULL, " +
-		"description STRING, " +
-		"pubdate TIMESTAMP, " +
-		"tags STRING[]," +
-		"read BOOL)")
-	if err != nil {
-		return nil, fmt.Errorf("failed to create table articles: %v", err)
-	}
-
-	_, err = db.Query("CREATE TABLE IF NOT EXISTS comments" +
-		"(article STRING NOT NULL," +
-		"feed STRING NOT NULL," +
-		"comments STRING NOT NULL PRIMARY KEY)")
-
-	if err != nil {
-		return nil, fmt.Errorf("failed to create table comments: %v", err)
+		return nil, err
 	}
 
 	return db, nil
@@ -92,7 +78,7 @@ func markReadDb(url string) {
 }
 
 func unreadArticlesDb(limit int) []Article {
-	articleRows, err := db.Query("SELECT url, title, description,pubdate FROM articles WHERE read=false ORDER BY pubdate DESC LIMIT ?", limit)
+	articleRows, err := db.Query("SELECT url, title, pubdate FROM articles WHERE read=false ORDER BY pubdate DESC LIMIT ?", limit)
 	if err != nil {
 		panic(err)
 	}
@@ -100,7 +86,7 @@ func unreadArticlesDb(limit int) []Article {
 	var articleList []Article
 	for articleRows.Next() {
 		var article Article
-		_ = articleRows.Scan(&article.Url, &article.Title, &article.Desc, &article.Date)
+		_ = articleRows.Scan(&article.Url, &article.Title, &article.Date)
 		article.EscapedUrl = url.QueryEscape(article.Url)
 
 		date, err := time.Parse(time.RFC3339, article.Date)
@@ -127,7 +113,7 @@ func unreadArticlesDb(limit int) []Article {
 }
 
 func readArticlesDb(limit int) []Article {
-	articleRows, err := db.Query("SELECT url, title, description,pubdate FROM articles WHERE read=true ORDER BY pubdate DESC LIMIT ?", limit)
+	articleRows, err := db.Query("SELECT url, title,pubdate FROM articles WHERE read=true ORDER BY pubdate DESC LIMIT ?", limit)
 	if err != nil {
 		panic(err)
 	}
@@ -135,7 +121,7 @@ func readArticlesDb(limit int) []Article {
 	var articleList []Article
 	for articleRows.Next() {
 		var article Article
-		_ = articleRows.Scan(&article.Url, &article.Title, &article.Desc, &article.Date)
+		_ = articleRows.Scan(&article.Url, &article.Title, &article.Date)
 		article.EscapedUrl = url.QueryEscape(article.Url)
 
 		date, err := time.Parse(time.RFC3339, article.Date)
@@ -189,7 +175,7 @@ func queryArticlesDb(query string) []Article {
 
 	fmt.Println("condition: " + condition)
 
-	articleRows, err := db.Query("SELECT url, title, description, pubdate, tags FROM articles WHERE " + condition)
+	articleRows, err := db.Query("SELECT url, title, pubdate, tags FROM articles WHERE " + condition)
 	if err != nil {
 		panic(err)
 	}
@@ -198,7 +184,7 @@ func queryArticlesDb(query string) []Article {
 	for articleRows.Next() {
 		var article Article
 		var tagsArr duckdb.Composite[[]string]
-		_ = articleRows.Scan(&article.Url, &article.Title, &article.Desc, &article.Date, &tagsArr)
+		_ = articleRows.Scan(&article.Url, &article.Title, &article.Date, &tagsArr)
 		article.Tags = tagsArr.Get()
 		article.EscapedUrl = url.QueryEscape(article.Url)
 
@@ -282,22 +268,23 @@ func removeTagDb(url string, tag string) {
 	}
 }
 
-func addFeedDb(url string) {
+func addFeedDb(url string) error {
 	_, err := db.Query("INSERT INTO feeds VALUES(?, '', '', NULL, [])", url)
 	if err != nil {
-		panic(err)
+		return err
 	}
+	return nil
 }
 
 func getArticleDb(article_url string) Article {
 	var article Article
 	// I don't think there is any reason for the feed names and comment links to match up to each other
 	// TODO: fix that
-	row := db.QueryRow("SELECT list_filter(list(comments), lambda x: x != NULL), list_filter(list(feeds.title), lambda x: x != NULL), ANY_VALUE(articles.url), ANY_VALUE(articles.title), ANY_VALUE(articles.description), ANY_VALUE(pubdate), ANY_VALUE(articles.tags) FROM articles LEFT JOIN comments ON articles.url=comments.article LEFT JOIN feeds ON comments.feed=feeds.url WHERE articles.url=? GROUP BY articles.url;", article_url)
+	row := db.QueryRow("SELECT list_filter(list(comments), lambda x: x != NULL), list_filter(list(feeds.title), lambda x: x != NULL), ANY_VALUE(articles.url), ANY_VALUE(articles.title), ANY_VALUE(pubdate), ANY_VALUE(articles.tags) FROM articles LEFT JOIN comments ON articles.url=comments.article LEFT JOIN feeds ON comments.feed=feeds.url WHERE articles.url=? GROUP BY articles.url;", article_url)
 	var tagsArr duckdb.Composite[[]string]
 	var commentsArr duckdb.Composite[[]string]
 	var feedCommentsArr duckdb.Composite[[]string]
-	err := row.Scan(&commentsArr, &feedCommentsArr, &article.Url, &article.Title, &article.Desc, &article.Date, &tagsArr)
+	err := row.Scan(&commentsArr, &feedCommentsArr, &article.Url, &article.Title, &article.Date, &tagsArr)
 	if err != nil {
 		panic(err)
 	}

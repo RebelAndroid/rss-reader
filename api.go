@@ -125,7 +125,13 @@ func addFeed(w http.ResponseWriter, r *http.Request) {
 				slog.DebugContext(r.Context(), "unable to read feed body")
 				continue
 			}
-			addFeedDb(url + path)
+			// this is the correct feed URL
+			err = addFeedDb(url + path)
+			if err != nil {
+				w.WriteHeader(http.StatusInternalServerError)
+				w.Write([]byte(err.Error()))
+				return
+			}
 			update_feed(db, url+path)
 			feed_template.Execute(w, getFeedDb(url+path))
 			break

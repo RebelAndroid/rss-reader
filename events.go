@@ -2,9 +2,12 @@ package main
 
 import (
 	"database/sql"
+	"fmt"
+	"io"
 	"net/http"
 	"time"
 
+	htmltomarkdown "github.com/JohannesKaufmann/html-to-markdown/v2"
 	"github.com/mmcdole/gofeed/rss"
 )
 
@@ -52,13 +55,11 @@ func update_feed(db *sql.DB, url string) {
 		println(err.Error())
 		panic("unable to get feed")
 	}
-	// 304 is "not modified", if this is the status, nothing has changed so we don't need to update it
-	// we might need to check if the body is empty as well, but I don't care
-	if resp.StatusCode == 304 {
+	defer resp.Body.Close()
+
+	if resp.StatusCode == http.StatusNotModified {
 		return
 	}
-
-	defer resp.Body.Close()
 
 	fp := rss.Parser{}
 	feed, err := fp.Parse(resp.Body)
@@ -79,12 +80,8 @@ func update_feed(db *sql.DB, url string) {
 		item := feed.Items[i]
 		title := item.Title
 		article := item.Link
-		date, err := time.Parse(time.RFC1123Z, item.PubDate)
-		if err != nil {
-			panic(err.Error())
-		}
 
-		_, err = db.Query("INSERT OR IGNORE INTO articles VALUES (?, ?, ?, ?, [], FALSE)", article, title, "description", date)
+		_, err = db.Query("INSERT OR IGNORE INTO articles VALUES (?, ?, ?, [], FALSE, FALSE)", article, title, item.PubDateParsed)
 		if err != nil {
 			println(err.Error())
 			panic("unable to set insert article")
@@ -99,5 +96,39 @@ func update_feed(db *sql.DB, url string) {
 			println(err.Error())
 			panic("unable to set insert comments")
 		}
+	}
+}
+
+func archive_pages(db *sql.DB) {
+	rows, err := db.Query("SELECT url FROM articles LEFT JOIN archive ON archive.article=articles.url WHERE archive.article IS NULL AND length(articles.tags) > 0")
+	if err != nil {
+		println(err.Error())
+		panic("unable to set get articles to be archived")
+	}
+	for rows.Next() {
+		var url string
+		err = rows.Scan(&url)
+		if err != nil {
+			println(err.Error())
+			panic("error scanning articles to be archived")
+		}
+		resp, err := http.Get(url)
+		if err != nil || resp.StatusCode != 200 {
+			println(err.Error())
+			panic("error getting article")
+		}
+		body, err := io.ReadAll(resp.Body)
+		if err != nil || resp.StatusCode != 200 {
+			println(err.Error())
+			panic("error getting article")
+		}
+		fmt.Println(string(body))
+
+		markdown, err := htmltomarkdown.ConvertString(string(body))
+		if err != nil || resp.StatusCode != 200 {
+			println(err.Error())
+			panic("error converting to markdown")
+		}
+		fmt.Println(markdown)
 	}
 }
