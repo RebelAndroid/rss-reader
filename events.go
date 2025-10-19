@@ -81,7 +81,7 @@ func update_feed(db *sql.DB, url string) {
 		title := item.Title
 		article := item.Link
 
-		_, err = db.Query("INSERT OR IGNORE INTO articles VALUES (?, ?, ?, [], FALSE, FALSE)", article, title, item.PubDateParsed)
+		_, err = db.Query("INSERT OR IGNORE INTO articles VALUES (?, ?, ?, [], FALSE)", article, title, item.PubDateParsed)
 		if err != nil {
 			slog.Error("unable to add article", "feed", url, "article", article, "error", err.Error())
 			continue
