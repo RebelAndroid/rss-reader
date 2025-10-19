@@ -103,7 +103,7 @@ func archive_pages(db *sql.DB) {
 	rows, err := db.Query("SELECT url FROM articles LEFT JOIN archive ON archive.article=articles.url WHERE archive.article IS NULL AND length(articles.tags) > 0")
 	if err != nil {
 		println(err.Error())
-		panic("unable to set get articles to be archived")
+		panic("unable to get articles to be archived")
 	}
 	for rows.Next() {
 		var url string

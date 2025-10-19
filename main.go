@@ -77,7 +77,7 @@ var feed_template *template.Template
 var articleComponentTemplate *template.Template
 
 func main() {
-	slog.SetLogLoggerLevel(slog.LevelDebug)
+	slog.SetLogLoggerLevel(slog.LevelError)
 	var err error
 	db, err = initDb()
 	if err != nil {
@@ -178,13 +178,13 @@ func main() {
 		}
 	}()
 
-	go func() {
-		for {
-			archive_pages(db)
-			slog.Info("archiving pages")
-			time.Sleep(60 * 60 * time.Second)
-		}
-	}()
+	// go func() {
+	// for {
+	// archive_pages(db)
+	// slog.Info("archiving pages")
+	// time.Sleep(60 * 60 * time.Second)
+	// }
+	// }()
 
 	slog.Info("server starting")
 	log.Fatal(http.ListenAndServe(":8080", mux))
