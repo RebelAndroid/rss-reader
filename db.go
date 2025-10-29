@@ -316,7 +316,7 @@ func getArticleDb(article_url string) Article {
 }
 
 func addBookmarkDb(url string, title string) {
-	_, err := db.Query("INSERT OR IGNORE INTO articles VALUES (?, ?, ?, ?, ['bookmark'], TRUE)", url, title, "description", time.Now().Format(time.RFC3339))
+	_, err := db.Query("INSERT OR IGNORE INTO articles VALUES (?, ?, ?, ['bookmark'], TRUE)", url, title, time.Now().Format(time.RFC3339))
 	if err != nil {
 		panic(err)
 	}
