@@ -160,3 +160,10 @@ header > a {
 .feeds {
         gap: 1em;
 }
+
+.search-results {
+        width: 100%;
+        display: flex;
+        align-items: center;
+        flex-direction: column;
+}
