@@ -199,7 +199,7 @@ func addBookmark(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	regex, err := regexp.Compile("<title>(.|\n)*</title>")
+	regex, err := regexp.Compile(`<title[^<>]*>([^<>]*)<\/title>`)
 	if err != nil {
 		slog.ErrorContext(r.Context(), "failed to compile regex in addBookmark")
 		w.WriteHeader(http.StatusInternalServerError)
@@ -207,13 +207,10 @@ func addBookmark(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	title := ""
-	titleBytes := regex.Find(httpBody)
-	if titleBytes != nil {
-		title = string(titleBytes[7 : len(titleBytes)-8])
-	}
+	matches := regex.FindSubmatch(httpBody)
+	title := string(matches[1])
 
-	slog.DebugContext(r.Context(), "extracted from bookmark", "title", title, "titleBytes", string(titleBytes))
+	slog.DebugContext(r.Context(), "extracted from bookmark", "title", title)
 
 	addBookmarkDb(url, title)
 

@@ -125,7 +125,7 @@ func archive_pages(db *sql.DB) {
 		fmt.Println(string(body))
 
 		markdown, err := htmltomarkdown.ConvertString(string(body))
-		if err != nil || resp.StatusCode != 200 {
+		if err != nil {
 			println(err.Error())
 			panic("error converting to markdown")
 		}
