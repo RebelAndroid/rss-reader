@@ -178,13 +178,13 @@ func main() {
 		}
 	}()
 
-	// go func() {
-	// for {
-	// archive_pages(db)
-	// slog.Info("archiving pages")
-	// time.Sleep(60 * 60 * time.Second)
-	// }
-	// }()
+	go func() {
+		for {
+			archive_pages(db)
+			slog.Info("archiving pages")
+			time.Sleep(60 * 60 * time.Second)
+		}
+	}()
 
 	slog.Info("server starting")
 	log.Fatal(http.ListenAndServe(":8080", mux))

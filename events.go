@@ -81,7 +81,7 @@ func update_feed(db *sql.DB, url string) {
 		title := item.Title
 		article := item.Link
 
-		_, err = db.Query("INSERT OR IGNORE INTO articles VALUES (?, ?, ?, [], FALSE)", article, title, item.PubDateParsed)
+		_, err = db.Query("INSERT OR IGNORE INTO articles VALUES (?, ?, ?, [], FALSE, NULL)", article, title, item.PubDateParsed)
 		if err != nil {
 			slog.Error("unable to add article", "feed", url, "article", article, "error", err.Error())
 			continue
@@ -100,7 +100,7 @@ func update_feed(db *sql.DB, url string) {
 }
 
 func archive_pages(db *sql.DB) {
-	rows, err := db.Query("SELECT url FROM articles LEFT JOIN archive ON archive.article=articles.url WHERE archive.article IS NULL AND length(articles.tags) > 0")
+	rows, err := db.Query("SELECT url FROM articles WHERE archive IS NULL AND length(articles.tags) > 0")
 	if err != nil {
 		println(err.Error())
 		panic("unable to get articles to be archived")
@@ -130,5 +130,10 @@ func archive_pages(db *sql.DB) {
 			panic("error converting to markdown")
 		}
 		fmt.Println(markdown)
+		_, err = db.Exec("UPDATE articles SET archive=? WHERE url=?", markdown, url)
+		if err != nil {
+			fmt.Println(err.Error())
+			panic("unable to add archive to db")
+		}
 	}
 }
