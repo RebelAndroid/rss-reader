@@ -77,7 +77,7 @@ var feed_template *template.Template
 var articleComponentTemplate *template.Template
 
 func main() {
-	slog.SetLogLoggerLevel(slog.LevelError)
+	slog.SetLogLoggerLevel(slog.LevelInfo)
 	var err error
 	db, err = initDb()
 	if err != nil {

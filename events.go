@@ -2,7 +2,6 @@ package main
 
 import (
 	"database/sql"
-	"fmt"
 	"io"
 	"log/slog"
 	"net/http"
@@ -114,26 +113,26 @@ func archive_pages(db *sql.DB) {
 		}
 		resp, err := http.Get(url)
 		if err != nil || resp.StatusCode != 200 {
-			println(err.Error())
-			panic("error getting article")
+			slog.Error("unable to get article", "url", url, "error", err, "status", resp.StatusCode)
+			continue
+			// todo: backoff
 		}
 		body, err := io.ReadAll(resp.Body)
-		if err != nil || resp.StatusCode != 200 {
-			println(err.Error())
-			panic("error getting article")
+		if err != nil {
+			slog.Error("unable to read body of article", "url", url)
+			continue
 		}
-		fmt.Println(string(body))
 
 		markdown, err := htmltomarkdown.ConvertString(string(body))
 		if err != nil {
-			println(err.Error())
-			panic("error converting to markdown")
+			slog.Error("unable to convert to markdown", "error", err, "url", url, "body", string(body))
+			continue
 		}
-		fmt.Println(markdown)
+
 		_, err = db.Exec("UPDATE articles SET archive=? WHERE url=?", markdown, url)
 		if err != nil {
-			fmt.Println(err.Error())
-			panic("unable to add archive to db")
+			slog.Error("unable to add archive to db", "error", err, "url", url)
+			continue
 		}
 	}
 }
