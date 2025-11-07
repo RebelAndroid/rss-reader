@@ -112,10 +112,13 @@ func archive_pages(db *sql.DB) {
 			panic("error scanning articles to be archived")
 		}
 		resp, err := http.Get(url)
-		if err != nil || resp.StatusCode != 200 {
+		if err != nil {
 			slog.Error("unable to get article", "url", url, "error", err, "status", resp.StatusCode)
 			continue
 			// todo: backoff
+		}
+		if resp.StatusCode != http.StatusOK {
+			slog.Error("unable to get article", "url", url, "error", err, "status", resp.StatusCode)
 		}
 		body, err := io.ReadAll(resp.Body)
 		if err != nil {

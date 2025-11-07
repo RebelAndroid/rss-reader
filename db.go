@@ -156,7 +156,6 @@ func conditionFromQuery(query string) (string, error) {
 	parts := strings.Split(query, " ")
 	condition := ""
 	for _, word := range parts {
-		fmt.Println(word)
 		if !r.MatchString(word) {
 			return "", fmt.Errorf("bad search query: %s, problem: %s", query, word)
 		}
@@ -175,8 +174,6 @@ func queryArticlesDb(query string) []Article {
 	if err != nil {
 		panic(err)
 	}
-
-	fmt.Println("condition: " + condition)
 
 	articleRows, err := db.Query("SELECT url, title, pubdate, tags FROM articles WHERE " + condition)
 	if err != nil {
