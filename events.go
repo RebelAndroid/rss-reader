@@ -5,6 +5,7 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
+	"strings"
 	"time"
 
 	htmltomarkdown "github.com/JohannesKaufmann/html-to-markdown/v2"
@@ -80,7 +81,7 @@ func update_feed(db *sql.DB, url string) {
 		title := item.Title
 		article := item.Link
 
-		_, err = db.Query("INSERT OR IGNORE INTO articles VALUES (?, ?, ?, [], FALSE, NULL)", article, title, item.PubDateParsed)
+		_, err = db.Query("INSERT OR IGNORE INTO articles VALUES (?, ?, ?, [], FALSE, NULL, FALSE)", article, title, item.PubDateParsed)
 		if err != nil {
 			slog.Error("unable to add article", "feed", url, "article", article, "error", err.Error())
 			continue
@@ -99,7 +100,7 @@ func update_feed(db *sql.DB, url string) {
 }
 
 func archive_pages(db *sql.DB) {
-	rows, err := db.Query("SELECT url FROM articles WHERE archive IS NULL AND length(articles.tags) > 0")
+	rows, err := db.Query("SELECT url FROM articles WHERE archive IS NULL AND length(articles.tags) > 0 AND NOT dead_link")
 	if err != nil {
 		println(err.Error())
 		panic("unable to get articles to be archived")
@@ -114,12 +115,29 @@ func archive_pages(db *sql.DB) {
 		resp, err := http.Get(url)
 		if err != nil {
 			slog.Error("unable to get article", "url", url, "error", err)
+			_, err = db.Exec("UPDATE articles SET dead_link=true WHERE url=?", url)
+			if err != nil {
+				slog.Error("unable to mark dead link in db", "error", err, "url", url)
+				continue
+			}
 			continue
-			// todo: backoff
 		}
 		if resp.StatusCode != http.StatusOK {
+
 			slog.Error("unable to get article", "url", url, "status", resp.StatusCode)
+			_, err = db.Exec("UPDATE articles SET dead_link=true WHERE url=?", url)
+			if err != nil {
+				slog.Error("unable to mark dead link in db", "error", err, "url", url)
+				continue
+			}
+			continue
 		}
+
+		if strings.Contains(resp.Header.Get("content-type"), "text/html") {
+			slog.Error("link is not HTML, not archiving", "url", url, "content-type", resp.Header.Get("content-type"))
+			continue
+		}
+
 		body, err := io.ReadAll(resp.Body)
 		if err != nil {
 			slog.Error("unable to read body of article", "url", url)
@@ -133,6 +151,11 @@ func archive_pages(db *sql.DB) {
 		}
 
 		_, err = db.Exec("UPDATE articles SET archive=? WHERE url=?", markdown, url)
+		if err != nil {
+			slog.Error("unable to add archive to db", "error", err, "url", url)
+			continue
+		}
+		_, err = db.Exec("UPDATE articles SET dead_link=FALSE WHERE url=?", url)
 		if err != nil {
 			slog.Error("unable to add archive to db", "error", err, "url", url)
 			continue
