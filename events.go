@@ -128,7 +128,7 @@ func archive_pages(db *sql.DB) {
 
 		markdown, err := htmltomarkdown.ConvertString(string(body))
 		if err != nil {
-			slog.Error("unable to convert to markdown", "error", err, "url", url, "body", string(body))
+			slog.Error("unable to convert to markdown", "error", err, "url", url)
 			continue
 		}
 
