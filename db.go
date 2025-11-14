@@ -150,6 +150,11 @@ func readArticlesDb(limit int) []Article {
 	return articleList
 }
 
+func addArticleDb(article Article) error {
+	_, err := db.Exec("INSERT OR IGNORE INTO articles VALUES (?, ?, ?, [], FALSE, NULL, FALSE)", article.Url, article.Title, article.Date)
+	return err
+}
+
 func conditionFromQuery(query string) (string, error) {
 	r := regexp.MustCompile(`^#?([a-z]|[A-Z]|[0-9])+$`)
 
@@ -310,11 +315,4 @@ func getArticleDb(article_url string) Article {
 	slog.Debug("queryArticles", "date", article.Date)
 
 	return article
-}
-
-func addBookmarkDb(url string, title string) {
-	_, err := db.Query("INSERT OR IGNORE INTO articles VALUES (?, ?, ?, ['bookmark'], TRUE)", url, title, time.Now().Format(time.RFC3339))
-	if err != nil {
-		panic(err)
-	}
 }

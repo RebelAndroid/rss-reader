@@ -170,15 +170,19 @@ func addBookmark(w http.ResponseWriter, r *http.Request) {
 		slog.ErrorContext(r.Context(), "failed to read request body")
 		w.WriteHeader(http.StatusInternalServerError)
 		w.Write([]byte(err.Error()))
+		return
 	}
 	parsed, err := url.ParseQuery(string(body))
 	if err != nil {
 		slog.ErrorContext(r.Context(), "failed to get query parameters from url")
 		w.WriteHeader(http.StatusInternalServerError)
 		w.Write([]byte(err.Error()))
+		return
 	}
 
 	url := parsed["url"][0]
+
+	slog.DebugContext(r.Context(), "adding bookmark", "url", url)
 
 	if !strings.HasPrefix(url, "https://") && !strings.HasPrefix(url, "http://") {
 		url = "https://" + url
@@ -199,20 +203,22 @@ func addBookmark(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	regex, err := regexp.Compile(`<title[^<>]*>([^<>]*)<\/title>`)
-	if err != nil {
-		slog.ErrorContext(r.Context(), "failed to compile regex in addBookmark")
-		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte(err.Error()))
-		return
-	}
+	regex := regexp.MustCompile(`<title[^<>]*>([^<>]*)<\/title>`)
 
 	matches := regex.FindSubmatch(httpBody)
 	title := string(matches[1])
 
 	slog.DebugContext(r.Context(), "extracted from bookmark", "title", title)
 
-	addBookmarkDb(url, title)
+	article := Article{
+		Url:        url,
+		EscapedUrl: "",
+		Title:      title,
+		Date:       time.Now().Format(time.RFC3339),
+		Comments:   []Comments{},
+		Tags:       []string{"bookmark"},
+	}
+	addArticleDb(article)
 
 	w.Write([]byte("Bookmark added successfully"))
 }
@@ -350,7 +356,15 @@ func importBookmarks(w http.ResponseWriter, r *http.Request) {
 		for _, bookmark := range folder.Children {
 			slog.Debug("got bookmark", "bookmark", bookmark)
 			if strings.HasPrefix(bookmark.URI, "http") {
-				addBookmarkDb(bookmark.URI, bookmark.Title)
+				article := Article{
+					Url:        bookmark.URI,
+					EscapedUrl: "",
+					Title:      bookmark.Title,
+					Date:       time.Now().Format(time.RFC3339),
+					Comments:   []Comments{},
+					Tags:       []string{"bookmark"},
+				}
+				addArticleDb(article)
 			}
 		}
 	}

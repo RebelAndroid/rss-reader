@@ -79,11 +79,19 @@ func update_feed(db *sql.DB, url string) {
 	for i := 0; i < len(feed.Items); i++ {
 		item := feed.Items[i]
 		title := item.Title
-		article := item.Link
 
-		_, err = db.Query("INSERT OR IGNORE INTO articles VALUES (?, ?, ?, [], FALSE, NULL, FALSE)", article, title, item.PubDateParsed)
+		article := Article{
+			Url:        item.Link,
+			EscapedUrl: "",
+			Title:      title,
+			Date:       item.PubDateParsed.Format(time.RFC3339),
+			Comments:   []Comments{},
+			Tags:       []string{},
+		}
+
+		err = addArticleDb(article)
 		if err != nil {
-			slog.Error("unable to add article", "feed", url, "article", article, "error", err.Error())
+			slog.Error("unable to add article", "feed", url, "article", item.Link, "error", err.Error())
 			continue
 		}
 
@@ -91,9 +99,9 @@ func update_feed(db *sql.DB, url string) {
 			continue
 		}
 
-		_, err = db.Query("INSERT OR IGNORE INTO comments VALUES (?, ?, ?)", article, url, item.Comments)
+		_, err = db.Query("INSERT OR IGNORE INTO comments VALUES (?, ?, ?)", item.Link, url, item.Comments)
 		if err != nil {
-			slog.Error("unable to add comments", "feed", url, "article", article, "comments", item.Comments, "error", err.Error())
+			slog.Error("unable to add comments", "feed", url, "article", item.Link, "comments", item.Comments, "error", err.Error())
 			continue
 		}
 	}
