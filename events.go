@@ -141,8 +141,9 @@ func archive_pages(db *sql.DB) {
 			continue
 		}
 
-		if strings.Contains(resp.Header.Get("content-type"), "text/html") {
-			slog.Error("link is not HTML, not archiving", "url", url, "content-type", resp.Header.Get("content-type"))
+		content_type := resp.Header.Get("content-type")
+		if strings.Contains(content_type, "text/html") {
+			slog.Error("link is not HTML, not archiving", "url", url, "content-type", content_type)
 			continue
 		}
 
